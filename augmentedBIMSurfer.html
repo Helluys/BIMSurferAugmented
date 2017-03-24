@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>BIMsurfer demo</title>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:300,600' rel='stylesheet' type='text/css' />
+    
+    <link rel="stylesheet" href="css/augmentedBIMSurfer.css"/>
+    <link rel="stylesheet" href="css/apiref.css"/>
+    <link rel="stylesheet" href="css/tree.css"/>
+    <link rel="stylesheet" href="css/metadata.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css"/>
+    
+    <script type="text/javascript" src="js/utils.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+    <script type="text/javascript" src="js/lib/require.js"></script>
+
+	<script type="text/javascript" src="js/imageManager.js"></script>
+	<script type="text/javascript" src="js/surferUI.js"></script>
+</head>
+<body>
+<div id="maincontainer">
+    <div id="topsection">
+        <h1>Augmented BIMsurfer</h1>
+        <div id="tabselector">
+        	<button class="tablinks active" onclick="imageManager.opentab(-1)">Model</button>
+        	<button id="addimage" onclick="imageManager.addEmptyImage()">Add image</button>
+        </div>
+    </div>
+    <div id="contentwrapper">
+    	<div id="tab_model" class="tabcontent defaulttab">
+	        <div id="typeSelector">
+	            <div>&nbsp;</div>
+	        </div>
+	        <div id="columns">
+                <div id="treeContainer" class="bimsurfer-static-tree">
+                </div>
+                <div id="viewerContainer">
+                </div>
+	        </div>
+        </div>
+        <div id="imagesmanager">
+        	<h2>Image manager</h2>
+        	<button onclick="imageManager.addEmptyImage()">Add image</button>
+        	<div id="imageProperties" style="visibility: hidden;">
+        		<label for="imageselector">Choose image :</label><select id="imageselector" onchange="imageManager.updateImageManager()"></select><br />
+        		<button onclick="imageManager.deleteImage()">Delete image</button><br />
+	        	<label for="imageBrowser">Change file : </label><input type="file" accept="image/*" id="imageBrowser" onchange="imageManager.fileChanged(event)"/><br />
+	        	<label for="imageRenamer">Rename : </label><input type="text" id="imageRenamer" onchange="imageManager.nameChanged(this.value)"/><br />
+	        	<button id='togglePickPoint' onclick='imageManager.togglePickPoint()'>Pick points</button><br />
+	        	<table id="pointtable"></table>
+	        </div>
+        </div>
+   	</div>
+</div>
+<div id="status"></div>
+
+</body>
+</html>
