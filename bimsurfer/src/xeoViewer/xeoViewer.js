@@ -29,6 +29,12 @@ define([
         var pickingPoint = false;
         var pointPickingCallback = null;
 
+        // Nombre de plan créé via la fonction createPlane()
+        var nbPlanes = 0;
+
+        // Booléen témoin de la création de la geometry "plane"
+        var planeGeom = false ;
+
         domNode.appendChild(canvas);
 
         // Create a Scene
@@ -876,21 +882,26 @@ define([
             object.material.diffuseMap = newDiffMap;
         };
 
+        /**
+         * Creates a plane which size and center position can be specified.
+         *
+         * @param params
+         * @param params.size Size of the plane
+         * @param params.center Center of the plane
+         */
         this.createPlane = function (params) {
 
             params = params || {};
 
-            var geometry = new xeogl.PlaneGeometry(scene, {
-                id: "geometry.test",
-                primitive: "triangles",
-                xSize: 2000,
-                zSize: 2000,
-                xSegments: 10,
-                zSegments: 10,
-                lod: 1.0 // Default
-            });
+            if (!planeGeom){
+                var geometry = new xeogl.PlaneGeometry(scene, {
+                    id: "geometry.test",
+                    primitive: "triangles",
+                });
 
-            collection.add(geometry);
+                collection.add(geometry);
+                planeGeom = true;
+            }
 
             var modelId = "test";
             var roid = "test";
@@ -902,27 +913,48 @@ define([
             var matrix;
             var types = Object.keys(DefaultMaterials);
 
-            var numEntities = params.numEntities || 1;
-            var size = params.size || 2;
-            var halfSize = size / 2;
-            var centerX = params.center ? params.center[0] : 0;
-            var centerY = params.center ? params.center[1] : 0;
-            var centerZ = params.center ? params.center[2] : 0;
+            var ab = [];
+            var ac = [];
+            var ad = [];
+            var dc = [];
 
-            this.createModel(modelId);
+            xeogl.math.subVec3(params.points[1],params.points[0],ab);
+            xeogl.math.subVec3(params.points[2],params.points[0],ac);
 
-            for (var i = 0; i < numEntities; i++) {
-                objectId = "plane" + i;
-                oid = objectId;
-                /*translate = xeogl.math.translationMat4c(
-                    (Math.random() * size - halfSize) + centerX,
-                    (Math.random() * size - halfSize) + centerY,
-                    (Math.random() * size - halfSize) + centerZ);
-                scale = xeogl.math.scalingMat4c(Math.random() * 32 + 0.2, Math.random() * 32 + 0.2, Math.random() * 10 + 0.2);*/
-                matrix = xeogl.math.identityMat4();
-                type = types[Math.round(Math.random() * types.length)];
-                this.createObject(modelId, roid, oid, objectId, ["test"], type, matrix);
+            var width = Math.sqrt(ab[0]*ab[0]+ab[1]*ab[1]+ab[2]*ab[2]);
+            
+            var d = xeogl.math.dotVec3(ab,ac);
+            xeogl.math.mulVec3Scalar(ab,d/width,ad);
+            
+            xeogl.math.subVec3(ac,ad,dc);
+
+            var height = Math.sqrt(dc[0]*dc[0]+dc[1]*dc[1]+dc[2]*dc[2]);
+
+            var w = [];
+            var h = [];
+            xeogl.math.mulVec3Scalar(ab,0.5,w);
+            xeogl.math.mulVec3Scalar(dc,0.5,h);
+
+            var center = xeogl.math.addVec3(params.points[0], xeogl.math.addVec3(w,h));       
+
+            if (!models[modelId]){
+                this.createModel(modelId);
             }
+            
+            objectId = "plane_" + nbPlanes;
+            oid = objectId;
+            translate = xeogl.math.translationMat4c(
+                center[0],
+                center[1],
+                center[2]);
+            scale = xeogl.math.scalingMat4c(
+                    width,
+                    1,
+                    height);
+            matrix = xeogl.math.mulMat4(translate, scale, xeogl.math.mat4());
+            type = types[Math.round(Math.random() * types.length)];
+            this.createObject(modelId, roid, oid, objectId, ["test"], type, matrix);
+            nbPlanes+=1;
 
             // Set camera just to establish the up vector as +Z; the following
             // call to viewFit() will arrange the eye and target positions properly.
@@ -936,7 +968,7 @@ define([
 
             this.saveReset();
         };
-		
+    
         this.startPickPoint = function(callback) {
             pointPickingCallback = callback;
             pickingPoint = true;

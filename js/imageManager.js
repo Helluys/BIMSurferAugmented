@@ -109,17 +109,17 @@ function ImageManager() {
 			document.getElementById("imageRenamer").value = selectedimagename;
 			document.getElementById("imageBrowser").value = ''; // setting a value is insecure operation
 
-			if(selectedimage.image === null) {
-				document.getElementById("togglePickPoint").style.visibility = "hidden";
-			} else {
-				document.getElementById("togglePickPoint").style.visibility = "inherit";
-			}
+			document.getElementById("togglePickPoint").style.display = selectedimage.image === null ? "none" : "initial";
+
 			var table = document.getElementById("pointtable");
 			var i, tableHTML = "";
 			for(i = 0; i < selectedimage.imagePoints.length; i++)
 				tableHTML += this.createPointTable(i, selectedimage.imagePoints[i], selectedimage.modelPoints[i]);
-
 			table.innerHTML = tableHTML;
+
+			document.getElementById("insertImageButton").style.display = selectedimage.image === null ? "none" : "initial";
+			document.getElementById("insertImageButton").disabled = selectedimage.imagePoints.length >= 3 ? false : true;
+			document.getElementById("insertImageWarning").style.display = (selectedimage.image === null || selectedimage.imagePoints.length >= 3) ? "none" : "initial";
 		}
 		else {
 			document.getElementById("imageProperties").style.visibility = "hidden";
@@ -148,13 +148,13 @@ function ImageManager() {
 
 	this.createPointTable = function(pointID, imagePoint, modelPoint) {
 		return 	"<tr><td class='imagenumber' rowspan='2' onclick='imageManager.removePoint(" + pointID + ")'>" + pointID + "</td><td>image</td>" +
-					"<td><label for='point" + pointID + "ix'>x </label><input id='point" + pointID + "ix' type='number' value='" + imagePoint[0] + "' step='0.01' /></td>" + 
-					"<td><label for='point" + pointID + "iy'>y </label><input id='point" + pointID + "iy' type='number' value='" + imagePoint[1] + "' step='0.01' /></td>" +
+					"<td><label for='point" + pointID + "ix'>x </label><input id='point" + pointID + "ix' type='number' value='" + imagePoint[0] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" + 
+					"<td><label for='point" + pointID + "iy'>y </label><input id='point" + pointID + "iy' type='number' value='" + imagePoint[1] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 					"<td></td>" +
 				"</tr><tr><td>model</td>" +
-					"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='0.01' /></td>" +
-					"<td><label for='point" + pointID + "my'>y </label><input id='point" + pointID + "my' type='number' value='" + modelPoint[1] + "' step='0.01' /></td>" +
-					"<td><label for='point" + pointID + "mz'>z </label><input id='point" + pointID + "mz' type='number' value='" + modelPoint[2] + "' step='0.01' /></td>" +
+					"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
+					"<td><label for='point" + pointID + "my'>y </label><input id='point" + pointID + "my' type='number' value='" + modelPoint[1] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
+					"<td><label for='point" + pointID + "mz'>z </label><input id='point" + pointID + "mz' type='number' value='" + modelPoint[2] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 				"</tr><tr class='separator'><td></td><td></td><td></td><td></td><td></td></tr>";
 	};
 
@@ -251,7 +251,29 @@ function ImageManager() {
 		this.updateImageManager();
 	}
 
+	this.updatePoint = function(pointID) {
+		var suffixes = ['ix', 'iy', 'mx', 'my', 'mz'];
+		var image = this.getCurrentImage();
+		var i;
+		for(i = 0; i < suffixes.length; i++) {
+			var input = document.getElementById('point' + pointID + suffixes[i]);
+			if(i < 2) {
+				image.imagePoints[pointID][i] = Number(input.value);
+			} else {
+				image.modelPoints[pointID][i-2] = Number(input.value);
+			}
+		}
+	}
+
 	this.displayImage = function() {
 		var image = this.getCurrentImage();
+
+		var planePoints = this.findPlanePoints(image);
+		bimSurfer.createPlane({points: planePoints});
+	}
+
+	this.findPlanePoints = function(image) {
+		var a = image.modelPoints[0], b = image.modelPoints[1], c = image.modelPoints[2]
+		return [[a[0], a[1], a[2]], [b[0], b[1], b[2]], [c[0], c[1], c[2]]];
 	}
 };

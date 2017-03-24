@@ -331,10 +331,14 @@ define(deps, function (Notifier, Model, PreloadQuery, GeometryLoader, xeoViewer,
             viewer.setTexture(params);
         };
 
-        this.createPlane = function() {
-            viewer.createPlane();
+        this.createPlane = function(params){
+            viewer.createPlane(params);
         };
-
+	    
+	    this.createSphere = function(params) {
+        	viewer.createSphere(params);
+	    };
+	    
         this.startPickPoint = function(params) {
         	if(!params.callback) {
         		console.error('Param expected: callback');
