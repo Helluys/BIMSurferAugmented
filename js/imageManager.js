@@ -96,7 +96,8 @@ function ImageManager() {
 
 	this.imageChanged = function() {
 		var imageID = this.getCurrentImageID();
-		this.opentab(imageID);
+		if(currentTab >= 0)
+			this.opentab(imageID);
 		this.updateImageManager();
 	}
 
