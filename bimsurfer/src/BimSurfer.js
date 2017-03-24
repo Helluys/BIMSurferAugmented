@@ -335,13 +335,17 @@ define(deps, function (Notifier, Model, PreloadQuery, GeometryLoader, xeoViewer,
             viewer.createPlane();
         };
 
-        this.pickPoint = function(params) {
+        this.startPickPoint = function(params) {
         	if(!params.callback) {
         		console.error('Param expected: callback');
         		return;
         	}
 
-        	viewer.initiatePickPoint(params.callback);
+        	viewer.startPickPoint(params.callback);
+        }
+
+        this.stopPickPoint = function() {
+        	viewer.stopPickPoint();
         }
 		
 		/**

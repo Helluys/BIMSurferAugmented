@@ -23,7 +23,7 @@
     <div id="topsection">
         <h1>Augmented BIMsurfer</h1>
         <div id="tabselector">
-        	<button class="tablinks active" onclick="imageManager.opentab(-1)">Model</button>
+        	<button id="tablink_model" class="tablinks active" onclick="imageManager.opentab(-1)">Model</button>
         	<button id="addimage" onclick="imageManager.addEmptyImage()">Add image</button>
         </div>
     </div>
@@ -42,13 +42,14 @@
         <div id="imagesmanager">
         	<h2>Image manager</h2>
         	<button onclick="imageManager.addEmptyImage()">Add image</button>
+    		<label for="imageselector">Choose image :</label><select id="imageselector" onchange="imageManager.imageChanged()"><option value="null" >None</option></select><br />
         	<div id="imageProperties" style="visibility: hidden;">
-        		<label for="imageselector">Choose image :</label><select id="imageselector" onchange="imageManager.updateImageManager()"></select><br />
         		<button onclick="imageManager.deleteImage()">Delete image</button><br />
 	        	<label for="imageBrowser">Change file : </label><input type="file" accept="image/*" id="imageBrowser" onchange="imageManager.fileChanged(event)"/><br />
 	        	<label for="imageRenamer">Rename : </label><input type="text" id="imageRenamer" onchange="imageManager.nameChanged(this.value)"/><br />
-	        	<button id='togglePickPoint' onclick='imageManager.togglePickPoint()'>Pick points</button><br />
+	        	<button id="togglePickPoint" onclick="imageManager.togglePickPoint()">Pick points</button><br />
 	        	<table id="pointtable"></table>
+	        	<button id="displayImage" onclick="imageManager.displayImage()">Display image</button><br />
 	        </div>
         </div>
    	</div>

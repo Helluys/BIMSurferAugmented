@@ -3,10 +3,10 @@
 function ImageManager() {
 	// {id : {name, source, image, tablink, tab, selectoroption, imagePoints, modelPoints, plane}}
 	var imageDictionary = {};
-	// {name : id}
-	var imageIDs = {};
 	var pickingPoints = false;
 	var lastID = 0;
+	var currentPoint = -1;
+	var currentTab = -1;
 
 	// add an empty image and update UI accordingly (image manager and tab selector)
 	this.addEmptyImage = function() {
@@ -32,34 +32,48 @@ function ImageManager() {
 		// add a tab button
 	    tabselector = document.getElementById("tabselector");
 	    var button = document.createElement("button");
+	    button.id = "tablink_" + imgID;
 	    button.className += " tablinks";
 	    button.onclick = function() { imageManager.opentab(imgID); };
 	    button.innerHTML = imgName;
 	    tabselector.appendChild(button);
 
 	 	imageDictionary[imgID] = {name: imgName, source: null, image: null, tablink: button, tab: tabcontent, selectoroption: option, imagePoints: [], modelPoints: []};
-		imageIDs[imgName] = imgID;
 	 	this.opentab(imgID);
 	};
 
 	this.getCurrentImageID = function() {
 		var imageID = document.getElementById("imageselector").value;
-		return imageID;
+		return imageID !== "null" ? imageID : -1;
 	}
 
 	this.getCurrentImageName = function() {
 		var imageID = document.getElementById("imageselector").value;
-		return imageDictionary[imageID].name;
+		return imageID !== "null" ? imageDictionary[imageID].name : null;
 	}
 
 	this.getCurrentImage = function() {
 		var imageID = document.getElementById("imageselector").value;
-		return imageDictionary[imageID];
+		return imageID !== "null" ? imageDictionary[imageID] : null;
 	}
 
 	this.deleteImage = function() {
-		var image = this.getCurrentImage();
+		var imageID = this.getCurrentImageID();
+		var image = imageDictionary[imageID];
 
+		// remove option in the image selector
+	    imageselector = document.getElementById("imageselector");
+	    imageselector.remove(imageselector.selectedIndex);
+
+	    // remove the tab
+	    image.tab.parentElement.removeChild(image.tab);
+
+	    // remove the tab button
+	    image.tablink.parentElement.removeChild(image.tablink);
+
+	    delete image;
+	    this.opentab(-1);
+	    this.updateImageManager();
 	}
 
 	this.nameChanged = function(newName) {
@@ -73,8 +87,6 @@ function ImageManager() {
 		}
 
 		// update dictionary
-		delete imageIDs[imageDictionary[id].name];
-		imageIDs[newName] = id;
 		imageDictionary[id].name = newName;
 		imageDictionary[id].tablink.innerHTML = newName;
 		imageDictionary[id].selectoroption.text = newName;
@@ -82,10 +94,16 @@ function ImageManager() {
 		this.updateImageManager();
 	};
 
+	this.imageChanged = function() {
+		var imageID = this.getCurrentImageID();
+		this.opentab(imageID);
+		this.updateImageManager();
+	}
+
 	this.updateImageManager = function() {
 		var selectedimagename = this.getCurrentImageName();
 		if(selectedimagename != null) {
-			var selectedimage = imageDictionary[imageIDs[selectedimagename]];
+			var selectedimage = this.getCurrentImage();
 
 			document.getElementById("imageProperties").style.visibility = "visible";
 			document.getElementById("imageRenamer").value = selectedimagename;
@@ -94,7 +112,7 @@ function ImageManager() {
 			if(selectedimage.image === null) {
 				document.getElementById("togglePickPoint").style.visibility = "hidden";
 			} else {
-				document.getElementById("togglePickPoint").style.visibility = "visible";
+				document.getElementById("togglePickPoint").style.visibility = "inherit";
 			}
 			var table = document.getElementById("pointtable");
 			var i, tableHTML = "";
@@ -142,6 +160,7 @@ function ImageManager() {
 
 	this.opentab = function(imageID) {
 	    var i, tabcontent, tablinks;
+	    currentTab = imageID < 0 ? -1 : imageID;
 
 	    // Get all elements with class="tabcontent" and hide them
 	    tabcontent = document.getElementsByClassName("tabcontent");
@@ -158,6 +177,8 @@ function ImageManager() {
 	    // Show the current tab, and add an "active" class to the button that opened the tab
 	    activetab = document.getElementById(imageID < 0 ? "tab_model" : "tab_" + imageID);
 	    activetab.style.display = "block";
+	    activetablink = document.getElementById(imageID < 0 ? "tablink_model" : "tablink_" + imageID);
+	    activetablink.className += " active";
 	    if(imageID >= 0) {
 	    	document.getElementById("imageselector").value = imageID;
 	    	this.updateImageManager();
@@ -170,14 +191,31 @@ function ImageManager() {
 	this.togglePickPoint = function() {
 		pickingPoints = !pickingPoints;
 		var image = this.getCurrentImage();
-	    var canvas = image.tab.children[0];
+		if(image === null)
+			return;
 
-		if(pickingPoints) {
-			document.getElementById("togglePickPoint").innerHTML = "Stop picking";
-			canvas.style.cursor = "crosshair";
+		if(currentTab < 0) {
+			var viewer = document.getElementById("viewerContainer");
+			if(pickingPoints) {
+				document.getElementById("togglePickPoint").innerHTML = "Stop picking";
+				currentPoint = 0;
+				bimSurfer.startPickPoint({callback: imageManager.modelPointPicked});
+				viewer.style.cursor = "crosshair";
+			} else {
+				document.getElementById("togglePickPoint").innerHTML = "Pick points";
+				currentPoint = -1;
+				bimSurfer.stopPickPoint();
+				viewer.style.cursor = "default";
+			}
 		} else {
-			document.getElementById("togglePickPoint").innerHTML = "Pick points";
-			canvas.style.cursor = "default";
+		    var canvas = image.tab.children[0];
+			if(pickingPoints) {
+				document.getElementById("togglePickPoint").innerHTML = "Stop picking";
+				canvas.style.cursor = "crosshair";
+			} else {
+				document.getElementById("togglePickPoint").innerHTML = "Pick points";
+				canvas.style.cursor = "default";
+			}
 		}
 	};
 
@@ -195,10 +233,25 @@ function ImageManager() {
 		 }
 	};
 
+	this.modelPointPicked = function(modelPoint) {
+		// using imageManager instead of this as it is used as a callback
+		var modelPoints = imageManager.getCurrentImage().modelPoints;
+		modelPoints[currentPoint] = [modelPoint[0], modelPoint[1], modelPoint[2]]; // avoid referencing
+		currentPoint++;
+		if(currentPoint == modelPoints.length) {
+			imageManager.togglePickPoint();
+		}
+		imageManager.updateImageManager();
+	}
+
 	this.removePoint = function(pointID) {
 		var image = this.getCurrentImage();
 		image.imagePoints.splice(pointID, 1);
 		image.modelPoints.splice(pointID, 1);
 		this.updateImageManager();
+	}
+
+	this.displayImage = function() {
+		var image = this.getCurrentImage();
 	}
 };

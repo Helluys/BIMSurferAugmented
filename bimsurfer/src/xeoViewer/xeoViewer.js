@@ -210,7 +210,6 @@ define([
                     });
                 }
                 else if(hit) {
-                    pickingPoint = false;
                     pointPickingCallback(hit.worldPos);
                 }
             });
@@ -938,9 +937,13 @@ define([
             this.saveReset();
         };
 		
-        this.initiatePickPoint = function(callback) {
+        this.startPickPoint = function(callback) {
             pointPickingCallback = callback;
             pickingPoint = true;
+        }
+
+        this.stopPickPoint = function() {
+            pickingPoint = false;
         }
         
 		/**
