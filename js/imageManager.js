@@ -115,7 +115,7 @@ function ImageManager() {
 			var table = document.getElementById("pointtable");
 			var i, tableHTML = "";
 			for(i = 0; i < selectedimage.imagePoints.length; i++)
-				tableHTML += this.createPointTable(i, selectedimage.imagePoints[i], selectedimage.modelPoints[i]);
+				tableHTML += this.createPointTable(selectedimage, i, selectedimage.imagePoints[i], selectedimage.modelPoints[i]);
 			table.innerHTML = tableHTML;
 
 			document.getElementById("insertImageButton").style.display = selectedimage.image === null ? "none" : "initial";
@@ -139,23 +139,28 @@ function ImageManager() {
 			var selectedimagename = imageDictionary[imageID].name;
 			selectedimage.source = evt.target.files[0].name;
 			selectedimage.image = img;
+			selectedimage.imagePoints = [];
+			selectedimage.modelPoints = [];
 			imageManager.renameImage(imageID, selectedimage.source);
 
 			var tab = selectedimage.tab;				
 			var canvas = tab.children[0];
-            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+			canvas.width = img.width;
+			canvas.height = img.height;
+            canvas.style.backgroundImage = 'url("' + url + '")'; 
+            canvas.style.backgroundSize = '100% 100%';
 	    };
 	};
 
-	this.createPointTable = function(pointID, imagePoint, modelPoint) {
+	this.createPointTable = function(image, pointID, imagePoint, modelPoint) {
 		return 	"<tr><td class='imagenumber' rowspan='2' onclick='imageManager.removePoint(" + pointID + ")'>" + pointID + "</td><td>image</td>" +
-					"<td><label for='point" + pointID + "ix'>x </label><input id='point" + pointID + "ix' type='number' value='" + imagePoint[0] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" + 
-					"<td><label for='point" + pointID + "iy'>y </label><input id='point" + pointID + "iy' type='number' value='" + imagePoint[1] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
+					"<td><label for='point" + pointID + "ix'>x </label><input id='point" + pointID + "ix' type='number' value='" + imagePoint[0] + "' min='0' max='" + image.image.width + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" + 
+					"<td><label for='point" + pointID + "iy'>y </label><input id='point" + pointID + "iy' type='number' value='" + imagePoint[1] + "' min='0' max='" + image.image.height + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 					"<td></td>" +
 				"</tr><tr><td>model</td>" +
-					"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
-					"<td><label for='point" + pointID + "my'>y </label><input id='point" + pointID + "my' type='number' value='" + modelPoint[1] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
-					"<td><label for='point" + pointID + "mz'>z </label><input id='point" + pointID + "mz' type='number' value='" + modelPoint[2] + "' step='1.0' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
+					"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
+					"<td><label for='point" + pointID + "my'>y </label><input id='point" + pointID + "my' type='number' value='" + modelPoint[1] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
+					"<td><label for='point" + pointID + "mz'>z </label><input id='point" + pointID + "mz' type='number' value='" + modelPoint[2] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 				"</tr><tr class='separator'><td></td><td></td><td></td><td></td><td></td></tr>";
 	};
 
@@ -224,12 +229,15 @@ function ImageManager() {
 		if(pickingPoints) {
 			var image = this.getCurrentImage();
 		    var canvas = image.tab.children[0];
+
 		    var rect = canvas.getBoundingClientRect();
-		    var x = Math.floor(event.offsetX * image.image.width / rect.width);
-		    var y = Math.floor(event.offsetY * image.image.height / rect.height);
+		    var x = event.offsetX * image.image.width / rect.width;
+		    var y = event.offsetY * image.image.height / rect.height;
 
 		    image.imagePoints.push([x, y]);
 		 	image.modelPoints.push([0, 0, 0]);
+
+		    this.drawPoints(canvas, image);
 		 	this.updateImageManager();
 		 }
 	};
@@ -247,14 +255,18 @@ function ImageManager() {
 
 	this.removePoint = function(pointID) {
 		var image = this.getCurrentImage();
+	    var canvas = image.tab.children[0];
+
 		image.imagePoints.splice(pointID, 1);
 		image.modelPoints.splice(pointID, 1);
+	    this.drawPoints(canvas, image);
 		this.updateImageManager();
-	}
+	};
 
 	this.updatePoint = function(pointID) {
 		var suffixes = ['ix', 'iy', 'mx', 'my', 'mz'];
 		var image = this.getCurrentImage();
+	    var canvas = image.tab.children[0];
 		var i;
 		for(i = 0; i < suffixes.length; i++) {
 			var input = document.getElementById('point' + pointID + suffixes[i]);
@@ -264,17 +276,47 @@ function ImageManager() {
 				image.modelPoints[pointID][i-2] = Number(input.value);
 			}
 		}
-	}
+	    this.drawPoints(canvas, image);
+	};
 
-	this.displayImage = function() {
+	this.drawPoints = function(canvas, image) {
+	    var imagePoints = image.imagePoints;
+	    var ctx = canvas.getContext("2d");
+	    var rect = canvas.getBoundingClientRect();
+	    ctx.clearRect(0, 0, rect.width, rect.height);
+
+	    var crossSize = image.image.width / 100;
+
+	    ctx.font = 2*crossSize + "px Arial";
+	    ctx.strokeStyle = "rgb(255, 255, 255)";
+	    ctx.fillStyle = "rgb(255, 255, 255)";
+
+	    ctx.beginPath();
+	    var i;
+	    for(i = 0; i < imagePoints.length; i++) {
+	    	var x = imagePoints[i][0] * canvas.width / image.image.width;
+	    	var y = imagePoints[i][1] * canvas.height / image.image.height;
+
+	    	ctx.moveTo(x - crossSize, y);
+	    	ctx.lineTo(x + crossSize, y);
+	    	ctx.moveTo(x, y - crossSize);
+	    	ctx.lineTo(x, y + crossSize);
+	    	var offX = x < 20 ? crossSize : -crossSize;
+	    	var offY = y < 20 ? crossSize : -crossSize;
+	    	ctx.fillText(i, x + offX, y + offY);
+	    }
+	    ctx.stroke();
+	};
+
+	this.insertImage = function() {
 		var image = this.getCurrentImage();
 
 		var planePoints = this.findPlanePoints(image);
 		bimSurfer.createPlane({points: planePoints});
-	}
+	};
 
 	this.findPlanePoints = function(image) {
 		var a = image.modelPoints[0], b = image.modelPoints[1], c = image.modelPoints[2]
 		return [[a[0], a[1], a[2]], [b[0], b[1], b[2]], [c[0], c[1], c[2]]];
-	}
+	};
 };
