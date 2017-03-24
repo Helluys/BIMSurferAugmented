@@ -29,12 +29,6 @@ define([
         var pickingPoint = false;
         var pointPickingCallback = null;
 
-        // Nombre de plan créé via la fonction createPlane()
-        var nbPlanes = 0;
-
-        // Booléen témoin de la création de la geometry "plane"
-        var planeGeom = false ;
-
         domNode.appendChild(canvas);
 
         // Create a Scene
@@ -132,6 +126,12 @@ define([
 
         // The current projection type
         var projectionType = "persp";
+
+        // Nombre de plan créé via la fonction createPlane()
+        var nbPlanes = 0;
+
+        // Booléen témoin de la création de la geometry "plane"
+        var planeGeom = false ;
 
         //-----------------------------------------------------------------------------------------------------------
         // Camera notifications
@@ -968,7 +968,56 @@ define([
 
             this.saveReset();
         };
-    
+	
+	this.createSphere = function(params){ //TODO: Scaling and positioning problem
+			params = params || {};
+			var random_num = Math.random();
+			var id_sphere = "sphere"+random_num;
+			
+			var geometry = new xeogl.SphereGeometry(scene, {
+				id: "geometry."+id_sphere,
+				center: [params.x,params.y,params.z],
+				radius: params.size,
+			});
+			
+			console.log(geometry);
+
+			var modelId = "sphere"+random_num;
+            var roid = "sphere"+random_num;
+            var oid;
+            var type;
+            var objectId;
+            var translate;
+            var scale;
+            var matrix;
+            var types = Object.keys(DefaultMaterials);
+
+            var numEntities = params.numEntities || 1;
+            var size = params.size || 2;
+            var halfSize = size / 2;
+            var centerX = params.center ? params.center[0] : geometry.center[0];
+            var centerY = params.center ? params.center[1] : geometry.center[1];
+            var centerZ = params.center ? params.center[2] : geometry.center[2];
+
+            this.createModel(modelId);
+
+            for (var i = 0; i < numEntities; i++) {
+                objectId = ("sphere" + random_num) + i;
+                oid = objectId;
+                translate = xeogl.math.translationMat4c(centerX, centerY, centerZ);
+                matrix = translate;
+                type = types[Math.round(Math.random() * types.length)];
+                this.createObject(modelId, roid, oid, objectId, ["sphere"+random_num], type, matrix);
+            }
+			
+			this.viewFit();
+
+            this.saveReset();
+			
+	};
+	
+	
+		
         this.startPickPoint = function(callback) {
             pointPickingCallback = callback;
             pickingPoint = true;
