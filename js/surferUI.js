@@ -1,6 +1,6 @@
 var address = QueryString.address;
 var token = QueryString.token;
-var imageManager = new ImageManager();
+var imageManager = null;
 
 // Loads a model from BIMServer, builds an explorer tree UI.
 // Clicking on a tree node fits the view to its scene object.
@@ -14,9 +14,11 @@ loadScripts(address + "/apps/bimserverjavascriptapi/js/", [
      "ifc4.js",
      "translations_en.js",
 ], function(){
-    require(["bimsurfer/src/BimSurfer","bimsurfer/src/StaticTreeRenderer","bimsurfer/src/MetaDataRenderer","bimsurfer/lib/domReady!"],
+    require(["bimsurfer/src/BimSurfer","bimsurfer/src/StaticTreeRenderer","bimsurfer/src/MetaDataRenderer","bimsurfer/lib/domReady!","js/ImageManager"],
         function (BimSurfer, StaticTreeRenderer, MetaDataRenderer) {
 
+			imageManager = new ImageManager();
+            
             var bimSurfer = new BimSurfer({
                 domNode: "viewerContainer"
             });
