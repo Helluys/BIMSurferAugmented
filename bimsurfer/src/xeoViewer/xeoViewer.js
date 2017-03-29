@@ -858,14 +858,22 @@ define([
 					zSize: params.size[1]
 				}),
 
-				transform: new xeogl.Rotate(scene, {
-					xyz: [params.rotAxis[0], params.rotAxis[1], params.rotAxis[2]],
-					angle: params.rotAngle,
+				transform: new xeogl.Scale(scene, {
+                    xyz: [params.scale[0], params.scale[1], params.scale[2]],
 
 					parent: new xeogl.Translate(scene, {
-						xyz: [params.center[0], params.center[1], params.center[2]],
-					})
-				})
+					    xyz: [params.center[0] - params.size[0]/2, params.center[1], params.center[2] - params.size[1]/2],
+                    
+                        parent: new xeogl.Rotate(scene, {
+                            xyz: [params.rotAxis[0], params.rotAxis[1], params.rotAxis[2]],
+                            angle: params.rotAngle,
+                        })
+    				})
+                }),
+
+                modes: new xeogl.Modes(scene, {
+                    backfaces: true
+                })
 			});
 
 			this.viewFit();
@@ -874,7 +882,7 @@ define([
 			return plane;
         };
 	
-		this.createMarkedPoint = function(params) { //TODO: Scaling and positioning problem
+		this.createMarkedPoint = function(params) {
 				params = params || {};
 
 				var sphere = new xeogl.Entity(scene, {
@@ -910,7 +918,7 @@ define([
 						xyz: [params.size, 0.0, params.size],
 						parent: s.transform
 					})
-				})*/
+				});*/
 
 				this.viewFit();
 	            this.saveReset();

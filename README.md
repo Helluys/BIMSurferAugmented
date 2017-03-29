@@ -1,5 +1,4 @@
 # BIMSurferAugmented
-
 Web interface/server that allows displaying images on top of a 3D model loaded from IFC BIMServer.
 Built on BIMSurfer and OpenCV Python.
 
@@ -14,4 +13,4 @@ Go back to the model tab and pick the corresponding 3d points.
 
 Click the "insert image" button to see your image matched on the 3d model (WIP)
 
-WARNING : this is an experimental system. The server is not secure and should be used for testing purposes only!
+WARNING : this is an experimental system. The server is not secure and should be used for testing purposes only! The transform computed by the server is currently wrong.

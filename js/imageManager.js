@@ -76,8 +76,6 @@ define(function () {
 
 		    delete image;
 		    this.opentab(-1);
-		    this.updateImageManager();
-		    this.updateModelSpheres();
 		}
 
 		this.nameChanged = function(newName) {
@@ -102,8 +100,6 @@ define(function () {
 			var imageID = this.getCurrentImageID();
 			if(currentTab >= 0)
 				this.opentab(imageID);
-			this.updateImageManager();
-			this.updateModelSpheres();
 		}
 
 		this.updateImageManager = function() {
@@ -131,10 +127,16 @@ define(function () {
 				document.getElementById("insertImageButton").style.display = selectedimage.image === null ? "none" : "initial";
 				document.getElementById("insertImageButton").disabled = selectedimage.imagePoints.length >= 4 ? false : true;
 				document.getElementById("insertImageWarning").style.display = (selectedimage.image === null || selectedimage.imagePoints.length >= 4) ? "none" : "initial";
+	            
+	            if(selectedimage.image != null) {
+		            var thumbnail = document.getElementById("imageThumbnail");
+		            thumbnail.height = thumbnail.width * selectedimage.image.height / selectedimage.image.width;
+		            thumbnail.style.backgroundImage = 'url("' + selectedimage.url + '")';
+		            drawPoints(selectedimage);
+		        }
 			}
 			else {
 				document.getElementById("imageProperties").style.visibility = "hidden";
-				document.getElementById("imageThumbnail").setAttribute("src", "");
 			}
 		};
 
@@ -157,12 +159,14 @@ define(function () {
 				imageManager.updateImageManager();
 				imageManager.updateModelSpheres();
 
-				var tab = selectedimage.tab;				
+				var tab = selectedimage.tab;
 				var canvas = tab.children[0];
 				canvas.width = img.width;
 				canvas.height = img.height;
 	            canvas.style.backgroundImage = 'url("' + url + '")'; 
 	            canvas.style.backgroundSize = '100% 100%';
+	            var thumbnail = document.getElementById("imageThumbnail");
+	            thumbnail.style.backgroundImage = 'url("' + url + '")'; 
 		    };
 		};
 
@@ -172,7 +176,7 @@ define(function () {
 						"<td><label for='point" + pointID + "iy'>y </label><input id='point" + pointID + "iy' type='number' value='" + imagePoint[1] + "' min='0' max='" + image.image.height + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 						"<td></td>" +
 					"</tr><tr><td>model</td>" +
-						"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='any' onchange='imageManager.updatePoints(" + pointID + ")' /></td>" +
+						"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 						"<td><label for='point" + pointID + "my'>y </label><input id='point" + pointID + "my' type='number' value='" + modelPoint[1] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 						"<td><label for='point" + pointID + "mz'>z </label><input id='point" + pointID + "mz' type='number' value='" + modelPoint[2] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 					"</tr><tr class='separator'><td></td><td></td><td></td><td></td><td></td></tr>";
@@ -203,7 +207,10 @@ define(function () {
 		    	document.getElementById("imageselector").value = imageID;
 			}
 
+			togglePickPoint = false;
+	    	
 	    	this.updateImageManager();
+	    	this.updateModelSpheres();
 			if(pickingPoints)
 				this.togglePickPoint();
 		};
@@ -256,8 +263,8 @@ define(function () {
 			    image.imagePoints.push([x, y]);
 			 	image.modelPoints.push([0, 0, 0]);
 
-			    this.drawPoints(image);
 			 	this.updateImageManager();
+			    this.drawPoints(image);
 			 }
 		};
 
@@ -288,8 +295,13 @@ define(function () {
 		};
 
 		this.drawPoints = function(image) {
+			var canvas = image.tab.children[0];
+			drawPointsCanvas(canvas, image);
+			drawPointsCanvas(document.getElementById("imageThumbnail"), image);
+		};
+
+		this.drawPointsCanvas = function(canvas, image) {
 		    var imagePoints = image.imagePoints;
-		    var canvas = image.tab.children[0];
 		    var ctx = canvas.getContext("2d");
 		    var rect = canvas.getBoundingClientRect();
 		    ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -355,7 +367,7 @@ define(function () {
 						if(image in planes) {
 							planes[image].destroy();
 						}
-						planes[image] = bimSurfer.createPlane({size: [image.image.width, image.image.height], center: response.tvec, rotAxis: response.raxis, rotAngle: response.rangle});
+						planes[image] = bimSurfer.createPlane({size: [image.image.width, image.image.height], center: response.tvec, rotAxis: response.raxis, rotAngle: response.rangle, scale: response.scale});
 						bimSurfer.setTexture({object: planes[image], texture: image.url});
 					}
 					else {

@@ -139,8 +139,9 @@ div.tabcontent.defaulttab {
     width: 110px;
 }
 
-#imagesmanager img#imageThumbnail {
-    width: 350px;
+#imagesmanager #imageThumbnail {
+    width: 330px;
+    background-size: cover;
 }
 
 #imagesmanager label {
