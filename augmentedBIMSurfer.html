@@ -47,9 +47,10 @@
 	        	<label for="imageBrowser">Change file : </label><input type="file" accept="image/*" id="imageBrowser" onchange="imageManager.fileChanged(event)"/><br />
 	        	<label for="imageRenamer">Rename : </label><input type="text" id="imageRenamer" onchange="imageManager.nameChanged(this.value)"/><br />
 	        	<hr>
-	        	<button id="togglePickPoint" onclick="imageManager.togglePickPoint()">Pick points</button><br />
+	        	<img id="imageThumbnail" src="" alt="imageThumbnail" />
+	        	<button id="togglePickPoint" onclick="imageManager.togglePickPoint()">Pick points</button><span id="pickPointWarning">Pick points in image tab first</span><br />
 	        	<table id="pointtable"></table>
-	        	<button id="insertImageButton" onclick="imageManager.insertImage()">Insert image</button><span id="insertImageWarning">At least 3 points are required</span><br />
+	        	<button id="insertImageButton" onclick="imageManager.insertImage()">Insert image</button><span id="insertImageWarning">At least 4 points are required</span><span id="waitingHomography" style="display: none">Awaiting homography computation...</span><span id="homographyFailure" style="display: none; color: red">Could not find a matching homography</span><br />
 	        </div>
         </div>
    	</div>

@@ -139,6 +139,10 @@ div.tabcontent.defaulttab {
     width: 110px;
 }
 
+#imagesmanager img#imageThumbnail {
+    width: 350px;
+}
+
 #imagesmanager label {
     display: inline-block;
     padding-left: 98x;

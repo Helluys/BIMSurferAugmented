@@ -206,14 +206,16 @@ define([
                         return;
                     }
 
-                    var selected = !!selectedObjects[objectId]; // Object currently selected?
-                    var shiftDown = scene.input.keyDown[input.KEY_SHIFT]; // Shift key down?
+                    if(objectId in objects) {
+	                    var selected = !!selectedObjects[objectId]; // Object currently selected?
+	                    var shiftDown = scene.input.keyDown[input.KEY_SHIFT]; // Shift key down?
 
-                    self.setSelection({
-                        ids: [objectId],
-                        selected: !selected, // Picking an object toggles its selection status
-                        clear: !shiftDown // Clear selection first if shift not down
-                    });
+	                    self.setSelection({
+	                        ids: [objectId],
+	                        selected: !selected, // Picking an object toggles its selection status
+	                        clear: !shiftDown // Clear selection first if shift not down
+	                    });
+	                }
                 }
                 else if(hit) {
                     pointPickingCallback(hit.worldPos);
@@ -438,8 +440,6 @@ define([
         	if (hiddenTypes.indexOf(type) !== -1) {
         		object.visibility.visible = false;
         	}
-
-            //object.material
 
             return object;
         };
@@ -827,63 +827,17 @@ define([
         this.setTexture = function (params) {
 
             params = params || {};
-
-            var ids = params.ids;
-            var types = params.types;
-
-            if (!ids && !types) {
-                console.error("Param expected: ids or types");
+            if (!params.object ) {
+                console.error("Param expected: object");
                 return;
             }
 
-            ids = ids || [];
-            types = types || [];
-
-            var texture = params.texture;
-
-            if (!texture) {
-                console.error("Param expected: 'texture'");
-                return;
-            }
-
-            var location = window.location.pathname;
-            var directory = location.substring(0, location.lastIndexOf('/') + 1)
-            var full_path = directory + texture;
-            console.log("Texture : " + full_path);
-
-            var objectId;
-            var object;
-            
-            for (i = 0, len = types.length; i < len; i++) {
-                var typedict = rfcTypes[types[i]] || {};
-                Object.keys(typedict).forEach(function (id) {
-                    var object = typedict[id];
-                    self._setObjectTexture(object, texture);
-                });
-            }
-
-            for (var i = 0, len = ids.length; i < len; i++) {
-
-                objectId = ids[i];
-                object = objects[objectId];
-
-                if (!object) {
-                    // No return on purpose to continue changing color of
-                    // other potentially valid object identifiers.
-                    console.error("Object not found: '" + objectId + "'");
-                } else {
-                    this._setObjectTexture(object, texture);
-                }
-            }
+            params.object.material.diffuseMap = new xeogl.Texture(scene, {src: params.texture});
         };
 
-        this._setObjectTexture = function (object, text) {
-    	    var newDiffMap = new xeogl.Texture(scene, {src: text});      
-            object.material.diffuseMap = newDiffMap;
-        };
-
-        /**
+        /*
          * Creates a plane which size and center position can be specified.
+         * Creates a plane from three points, the first two being adjacent corners and the last giving height
          *
          * @param params
          * @param params.size Size of the plane
@@ -893,130 +847,76 @@ define([
 
             params = params || {};
 
-            if (!planeGeom){
-                var geometry = new xeogl.PlaneGeometry(scene, {
-                    id: "geometry.test",
-                    primitive: "triangles",
-                });
-
-                collection.add(geometry);
-                planeGeom = true;
+            if(!params.size || !params.center || !params.rotAxis || ! params.rotAngle) {
+            	console.log("Params expected: size, center, rotAxis, rotAngle");
             }
 
-            var modelId = "test";
-            var roid = "test";
-            var oid;
-            var type;
-            var objectId;
-            var translate;
-            var scale;
-            var matrix;
-            var types = Object.keys(DefaultMaterials);
+			var plane = new xeogl.Entity(scene, {
+				geometry: new xeogl.PlaneGeometry(scene, {
+					center: [0, 0, 0],
+					xSize: params.size[0],
+					zSize: params.size[1]
+				}),
 
-            var ab = [];
-            var ac = [];
-            var ad = [];
-            var dc = [];
+				transform: new xeogl.Rotate(scene, {
+					xyz: [params.rotAxis[0], params.rotAxis[1], params.rotAxis[2]],
+					angle: params.rotAngle,
 
-            xeogl.math.subVec3(params.points[1],params.points[0],ab);
-            xeogl.math.subVec3(params.points[2],params.points[0],ac);
+					parent: new xeogl.Translate(scene, {
+						xyz: [params.center[0], params.center[1], params.center[2]],
+					})
+				})
+			});
 
-            var width = Math.sqrt(ab[0]*ab[0]+ab[1]*ab[1]+ab[2]*ab[2]);
-            
-            var d = xeogl.math.dotVec3(ab,ac);
-            xeogl.math.mulVec3Scalar(ab,d/width,ad);
-            
-            xeogl.math.subVec3(ac,ad,dc);
-
-            var height = Math.sqrt(dc[0]*dc[0]+dc[1]*dc[1]+dc[2]*dc[2]);
-
-            var w = [];
-            var h = [];
-            xeogl.math.mulVec3Scalar(ab,0.5,w);
-            xeogl.math.mulVec3Scalar(dc,0.5,h);
-
-            var center = xeogl.math.addVec3(params.points[0], xeogl.math.addVec3(w,h));       
-
-            if (!models[modelId]){
-                this.createModel(modelId);
-            }
-            
-            objectId = "plane_" + nbPlanes;
-            oid = objectId;
-            translate = xeogl.math.translationMat4c(
-                center[0],
-                center[1],
-                center[2]);
-            scale = xeogl.math.scalingMat4c(
-                    width,
-                    1,
-                    height);
-            matrix = xeogl.math.mulMat4(translate, scale, xeogl.math.mat4());
-            type = types[Math.round(Math.random() * types.length)];
-            this.createObject(modelId, roid, oid, objectId, ["test"], type, matrix);
-            nbPlanes+=1;
-
-            // Set camera just to establish the up vector as +Z; the following
-            // call to viewFit() will arrange the eye and target positions properly.
-            /*this.setCamera({
-                eye: [0,0,0],
-                target: [centerX, centerY, centerZ],
-                up: [0,0,1]
-            });*/
-
-            this.viewFit();
-
+			this.viewFit();
             this.saveReset();
+
+			return plane;
         };
 	
-	this.createSphere = function(params){ //TODO: Scaling and positioning problem
-			params = params || {};
-			var random_num = Math.random();
-			var id_sphere = "sphere"+random_num;
-			
-			var geometry = new xeogl.SphereGeometry(scene, {
-				id: "geometry."+id_sphere,
-				center: [params.x,params.y,params.z],
-				radius: params.size,
-			});
-			
-			console.log(geometry);
+		this.createMarkedPoint = function(params) { //TODO: Scaling and positioning problem
+				params = params || {};
 
-			var modelId = "sphere"+random_num;
-            var roid = "sphere"+random_num;
-            var oid;
-            var type;
-            var objectId;
-            var translate;
-            var scale;
-            var matrix;
-            var types = Object.keys(DefaultMaterials);
+				var sphere = new xeogl.Entity(scene, {
+					geometry: new xeogl.SphereGeometry(scene, {
+						center: [0, 0, 0],
+						radius: params.size
+					}),
 
-            var numEntities = params.numEntities || 1;
-            var size = params.size || 2;
-            var halfSize = size / 2;
-            var centerX = params.center ? params.center[0] : geometry.center[0];
-            var centerY = params.center ? params.center[1] : geometry.center[1];
-            var centerZ = params.center ? params.center[2] : geometry.center[2];
+					transform: new xeogl.Translate(scene, {
+						xyz: [params.center[0], params.center[1], params.center[2]]
+					}),
 
-            this.createModel(modelId);
+					material: new xeogl.Material(scene, {
+						ambient: [1.0, 0.0, 1.0],
+						diffuse: [1.0, 0.0, 1.0]
+					})
+				});
 
-            for (var i = 0; i < numEntities; i++) {
-                objectId = ("sphere" + random_num) + i;
-                oid = objectId;
-                translate = xeogl.math.translationMat4c(centerX, centerY, centerZ);
-                matrix = translate;
-                type = types[Math.round(Math.random() * types.length)];
-                this.createObject(modelId, roid, oid, objectId, ["sphere"+random_num], type, matrix);
-            }
-			
-			this.viewFit();
+				/* xeogl.VectorTextGeometry not found?
+				var m = new xeogl.Entity(scene, {
+					geometry: new xeogl.VectorTextGeometry(scene, {
+						text: params.mark,
+						origin: [0, 0, 0],
+						size: params.size
+					}),
 
-            this.saveReset();
-			
-	};
-	
-	
+					material: new xeogl.Material(scene, {
+						emissive: [1.0, 0.0, 1.0],
+						lineWidth: 2
+					}),
+
+					transform: new xeogl.Translate({
+						xyz: [params.size, 0.0, params.size],
+						parent: s.transform
+					})
+				})*/
+
+				this.viewFit();
+	            this.saveReset();
+
+	            return sphere; //{sphere: sphere, mark: mark};
+		};
 		
         this.startPickPoint = function(callback) {
             pointPickingCallback = callback;
@@ -1177,6 +1077,7 @@ define([
             var view = camera.view;
 
             var json = {
+            	view: view,
                 type: projectionType,
                 eye: view.eye.slice(0),
                 target: view.look.slice(0),

@@ -331,12 +331,12 @@ define(deps, function (Notifier, Model, PreloadQuery, GeometryLoader, xeoViewer,
             viewer.setTexture(params);
         };
 
-        this.createPlane = function(params){
-            viewer.createPlane(params);
-        };
+        this.createPlane = function(params) {
+            return viewer.createPlane(params);
+        }
 	    
-	    this.createSphere = function(params) {
-        	viewer.createSphere(params);
+	    this.createMarkedPoint = function(params) {
+        	return viewer.createMarkedPoint(params);
 	    };
 	    
         this.startPickPoint = function(params) {

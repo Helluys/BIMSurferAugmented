@@ -4,6 +4,7 @@ from urlparse import urlparse, parse_qs
 from urllib import quote_plus
 import json
 import cv2
+import numpy as np
 
 class GetHandler(BaseHTTPRequestHandler):
     def _set_headers(self):
@@ -14,6 +15,9 @@ class GetHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path == "/" :
+            path = "/index.html"
+
         try:
             if path.endswith('.html') or path.endswith('.css') or path.endswith('.js') :
                 #self.path has /test.html
@@ -50,13 +54,37 @@ class GetHandler(BaseHTTPRequestHandler):
             data = json.loads(self.data_string)
             # data now holds a dictionnary with the JSON data in it
             
-            # OpenCV work goes here
+            npImagePoints = np.array(data['imagePoints'])
+            # append zeros to image points so they are 3D
+            #zeros = np.zeros((npImagePoints.shape[0], 1), dtype=npImagePoints.dtype)
+            #npImagePoints = np.append(npImagePoints, zeros, 1)
 
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps([[0, 0, 0], [100, 0, 0], [0, 100, 0]]))
+            npModelPoints = np.array(data['modelPoints'])
+            
+            npCameraIntrisics = np.array(data['cameraIntrinsics'])
 
+            # find pose
+            #try :
+            success, rvec, tvec = cv2.solvePnP(npModelPoints, npImagePoints, npCameraIntrisics, np.array([]))
+            if success :
+                
+                rangle = np.linalg.norm(rvec) * 360 / np.pi
+                raxis = rvec / rangle
+                print tvec
+                print raxis
+                print rangle
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': True, 'tvec' : tvec.tolist(), 'raxis' : raxis.tolist(), 'rangle' : rangle}))
+                
+            else :
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': False}))
+                
         else :
             # unauthorized files : "i'm a teapot"
             self.send_response(418)

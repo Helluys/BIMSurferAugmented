@@ -2,12 +2,14 @@
 
 define(function () {
 	ImageManager = function() {
-		// {id : {name, source, image, tablink, tab, selectoroption, imagePoints, modelPoints, plane}}
+		// {id : {name, source, url, image, tablink, tab, selectoroption, imagePoints, modelPoints, plane}}
 		var imageDictionary = {};
 		var pickingPoints = false;
 		var lastID = 0;
 		var currentPoint = -1;
 		var currentTab = -1;
+		var modelSpheres = [];
+		var planes = {}
 
 		// add an empty image and update UI accordingly (image manager and tab selector)
 		this.addEmptyImage = function() {
@@ -75,6 +77,7 @@ define(function () {
 		    delete image;
 		    this.opentab(-1);
 		    this.updateImageManager();
+		    this.updateModelSpheres();
 		}
 
 		this.nameChanged = function(newName) {
@@ -100,6 +103,7 @@ define(function () {
 			if(currentTab >= 0)
 				this.opentab(imageID);
 			this.updateImageManager();
+			this.updateModelSpheres();
 		}
 
 		this.updateImageManager = function() {
@@ -111,7 +115,12 @@ define(function () {
 				document.getElementById("imageRenamer").value = selectedimagename;
 				document.getElementById("imageBrowser").value = ''; // setting a value is insecure operation
 
+				document.getElementById("imageThumbnail").style.display = selectedimage.image === null ? "none" : "initial";
+				document.getElementById("imageThumbnail").setAttribute("src", selectedimage.url);
+
 				document.getElementById("togglePickPoint").style.display = selectedimage.image === null ? "none" : "initial";
+				document.getElementById("togglePickPoint").disabled = (currentTab == -1 && selectedimage.imagePoints.length == 0) ? true : false;
+				document.getElementById("pickPointWarning").style.display = (currentTab == -1 && selectedimage.imagePoints.length == 0) ? "initial" : "none";
 
 				var table = document.getElementById("pointtable");
 				var i, tableHTML = "";
@@ -120,11 +129,12 @@ define(function () {
 				table.innerHTML = tableHTML;
 
 				document.getElementById("insertImageButton").style.display = selectedimage.image === null ? "none" : "initial";
-				document.getElementById("insertImageButton").disabled = selectedimage.imagePoints.length >= 3 ? false : true;
-				document.getElementById("insertImageWarning").style.display = (selectedimage.image === null || selectedimage.imagePoints.length >= 3) ? "none" : "initial";
+				document.getElementById("insertImageButton").disabled = selectedimage.imagePoints.length >= 4 ? false : true;
+				document.getElementById("insertImageWarning").style.display = (selectedimage.image === null || selectedimage.imagePoints.length >= 4) ? "none" : "initial";
 			}
 			else {
 				document.getElementById("imageProperties").style.visibility = "hidden";
+				document.getElementById("imageThumbnail").setAttribute("src", "");
 			}
 		};
 
@@ -140,9 +150,12 @@ define(function () {
 				var selectedimagename = imageDictionary[imageID].name;
 				selectedimage.source = evt.target.files[0].name;
 				selectedimage.image = img;
+				selectedimage.url = url;
 				selectedimage.imagePoints = [];
 				selectedimage.modelPoints = [];
 				imageManager.renameImage(imageID, selectedimage.source);
+				imageManager.updateImageManager();
+				imageManager.updateModelSpheres();
 
 				var tab = selectedimage.tab;				
 				var canvas = tab.children[0];
@@ -159,7 +172,7 @@ define(function () {
 						"<td><label for='point" + pointID + "iy'>y </label><input id='point" + pointID + "iy' type='number' value='" + imagePoint[1] + "' min='0' max='" + image.image.height + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 						"<td></td>" +
 					"</tr><tr><td>model</td>" +
-						"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
+						"<td><label for='point" + pointID + "mx'>x </label><input id='point" + pointID + "mx' type='number' value='" + modelPoint[0] + "' step='any' onchange='imageManager.updatePoints(" + pointID + ")' /></td>" +
 						"<td><label for='point" + pointID + "my'>y </label><input id='point" + pointID + "my' type='number' value='" + modelPoint[1] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 						"<td><label for='point" + pointID + "mz'>z </label><input id='point" + pointID + "mz' type='number' value='" + modelPoint[2] + "' step='any' onchange='imageManager.updatePoint(" + pointID + ")' /></td>" +
 					"</tr><tr class='separator'><td></td><td></td><td></td><td></td><td></td></tr>";
@@ -188,9 +201,9 @@ define(function () {
 		    activetablink.className += " active";
 		    if(imageID >= 0) {
 		    	document.getElementById("imageselector").value = imageID;
-		    	this.updateImageManager();
 			}
 
+	    	this.updateImageManager();
 			if(pickingPoints)
 				this.togglePickPoint();
 		};
@@ -243,36 +256,24 @@ define(function () {
 			    image.imagePoints.push([x, y]);
 			 	image.modelPoints.push([0, 0, 0]);
 
-			    this.drawPoints(canvas, image);
+			    this.drawPoints(image);
 			 	this.updateImageManager();
 			 }
 		};
 
-		this.modelPointPicked = function(modelPoint) {
-			// using imageManager instead of this as it is used as a callback
-			var modelPoints = imageManager.getCurrentImage().modelPoints;
-			modelPoints[currentPoint] = [modelPoint[0], modelPoint[1], modelPoint[2]]; // avoid referencing
-			currentPoint++;
-			if(currentPoint == modelPoints.length) {
-				imageManager.togglePickPoint();
-			}
-			imageManager.updateImageManager();
-		}
-
 		this.removePoint = function(pointID) {
 			var image = this.getCurrentImage();
-		    var canvas = image.tab.children[0];
 
 			image.imagePoints.splice(pointID, 1);
 			image.modelPoints.splice(pointID, 1);
-		    this.drawPoints(canvas, image);
 			this.updateImageManager();
+		    this.drawPoints(image);
+			this.updateModelSpheres();
 		};
 
 		this.updatePoint = function(pointID) {
 			var suffixes = ['ix', 'iy', 'mx', 'my', 'mz'];
 			var image = this.getCurrentImage();
-		    var canvas = image.tab.children[0];
 			var i;
 			for(i = 0; i < suffixes.length; i++) {
 				var input = document.getElementById('point' + pointID + suffixes[i]);
@@ -282,14 +283,16 @@ define(function () {
 					image.modelPoints[pointID][i-2] = Number(input.value);
 				}
 			}
-		    this.drawPoints(canvas, image);
+		    this.drawPoints(image);
+		    this.updateModelSpheres();
 		};
 
-		this.drawPoints = function(canvas, image) {
+		this.drawPoints = function(image) {
 		    var imagePoints = image.imagePoints;
+		    var canvas = image.tab.children[0];
 		    var ctx = canvas.getContext("2d");
 		    var rect = canvas.getBoundingClientRect();
-		    ctx.clearRect(0, 0, rect.width, rect.height);
+		    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 		    var crossSize = image.image.width / 100;
 
@@ -314,20 +317,61 @@ define(function () {
 		    ctx.stroke();
 		};
 
+		this.modelPointPicked = function(modelPoint) {
+			// using imageManager instead of this as it is used as a callback
+			var modelPoints = imageManager.getCurrentImage().modelPoints;
+			modelPoints[currentPoint] = [modelPoint[0], modelPoint[1], modelPoint[2]]; // avoid referencing
+			currentPoint++;
+			if(currentPoint == modelPoints.length) {
+				imageManager.togglePickPoint();
+			}
+			imageManager.updateModelSpheres();
+			imageManager.updateImageManager();
+		}
+
+		this.updateModelSpheres = function() {
+			var modelPoints = imageManager.getCurrentImage().modelPoints;
+			var i;
+			for(i = 0; i < modelSpheres.length; i++) {
+				modelSpheres[i].destroy();
+			}
+			modelSpheres.length = 0;
+
+			for(i = 0; i < modelPoints.length; i++) {
+				modelSpheres[i] = bimSurfer.createMarkedPoint({center: [modelPoints[i][0], modelPoints[i][1], modelPoints[i][2]], size: 1, mark: i});
+			}
+		}
+
 		this.insertImage = function() {
 			var image = this.getCurrentImage();
 
 			var xhttp = new XMLHttpRequest();
 			xhttp.onreadystatechange = function() {
 				if (this.readyState == 4 && this.status == 200) {
-					var params = {points: JSON.parse(this.responseText)};
-					bimSurfer.createPlane(params);
+					var response = JSON.parse(this.responseText);
+
+					document.getElementById("waitingHomography").style.display = "none";
+					if(response.success) {
+						if(image in planes) {
+							planes[image].destroy();
+						}
+						planes[image] = bimSurfer.createPlane({size: [image.image.width, image.image.height], center: response.tvec, rotAxis: response.raxis, rotAngle: response.rangle});
+						bimSurfer.setTexture({object: planes[image], texture: image.url});
+					}
+					else {
+						document.getElementById("homographyFailure").style.display = "inherit";
+					}
 				}
 			};
 
+			var camera = bimSurfer.getCamera();
+			var ratio = image.image.width / image.image.height;
 			xhttp.open("POST", "/match_points", true);
 			xhttp.setRequestHeader("Content-Type", "application/json");
-			xhttp.send(JSON.stringify({imagePoints: image.imagePoints, modelPoints: image.modelPoints}));
+			var data = JSON.stringify({imagePoints: image.imagePoints, modelPoints: image.modelPoints, cameraIntrinsics: [[camera.fovy * ratio, 0, 0], [0, camera.fovy, 0], [0, 0, 1]]});
+			xhttp.send(data);
+			document.getElementById("waitingHomography").style.display = "inherit";
+			document.getElementById("homographyFailure").style.display = "none";
 		};
 	};
 
